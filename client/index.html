@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="HTTI Studio — Convert HTML & CSS into images instantly." />
+  <meta name="theme-color" content="#0D0D0D" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="stylesheet" href="styles.css" />
+  <title>HTTI Studio</title>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════
+       AUTH SCREEN
+  ═══════════════════════════════════════════ -->
+  <div id="auth-screen" class="screen active">
+    <div class="auth-wrap">
+
+      <!-- Brand -->
+      <div class="brand">
+        <span class="brand-icon">⬡</span>
+        <h1 class="brand-name">HTTI Studio</h1>
+        <p class="brand-tagline">HTML + CSS → Image. Instantly.</p>
+      </div>
+
+      <!-- Auth Card -->
+      <div class="auth-card" id="auth-card">
+
+        <!-- Tab switcher -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Sign In</button>
+          <button class="auth-tab" data-tab="signup">Sign Up</button>
+        </div>
+
+        <!-- Error Banner -->
+        <div class="auth-error hidden" id="auth-error"></div>
+
+        <!-- Email form -->
+        <form class="auth-form" id="auth-form" novalidate>
+          <div class="field-group" id="name-group" style="display:none;">
+            <label class="field-label" for="auth-name">Full Name</label>
+            <input class="field-input" type="text" id="auth-name" placeholder="Ada Lovelace" autocomplete="name" />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="auth-email">Email</label>
+            <input class="field-input" type="email" id="auth-email" placeholder="ada@example.com" autocomplete="email" required />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="auth-password">Password</label>
+            <input class="field-input" type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" required />
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full" id="auth-submit-btn">
+            <span class="btn-label">Sign In</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="auth-divider"><span>or continue with</span></div>
+
+        <!-- OAuth buttons -->
+        <div class="oauth-row">
+          <button class="btn btn-oauth" id="google-btn" aria-label="Sign in with Google">
+            <!-- Google icon SVG -->
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+              <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+            </svg>
+            Google
+          </button>
+
+          <button class="btn btn-oauth" id="github-btn" aria-label="Sign in with GitHub">
+            <!-- GitHub icon SVG -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+            </svg>
+            GitHub
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       APP SCREEN
+  ═══════════════════════════════════════════ -->
+  <div id="app-screen" class="screen">
+
+    <!-- Top Nav -->
+    <nav class="topnav">
+      <div class="topnav-brand">
+        <span class="brand-icon-sm">⬡</span>
+        <span class="topnav-name">HTTI Studio</span>
+      </div>
+
+      <div class="topnav-right">
+        <!-- History toggle -->
+        <button class="icon-btn" id="history-toggle-btn" title="Image History" aria-label="Toggle history panel">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>
+          </svg>
+        </button>
+
+        <!-- Settings toggle -->
+        <button class="icon-btn" id="settings-toggle-btn" title="Settings" aria-label="Toggle settings panel">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+
+        <!-- User menu -->
+        <div class="user-menu-wrap">
+          <button class="user-avatar-btn" id="user-avatar-btn" aria-label="User menu">
+            <span id="user-avatar-initials">?</span>
+          </button>
+          <div class="user-dropdown hidden" id="user-dropdown">
+            <div class="user-dropdown-info">
+              <span id="dropdown-display-name" class="dropdown-name">User</span>
+              <span id="dropdown-email" class="dropdown-email">—</span>
+            </div>
+            <hr class="dropdown-divider" />
+            <button class="dropdown-item" id="logout-btn">Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- App Body -->
+    <div class="app-body">
+
+      <!-- ── SETTINGS PANEL ── -->
+      <aside class="side-panel hidden" id="settings-panel" role="complementary" aria-label="Image settings">
+        <div class="panel-header">
+          <h2 class="panel-title">Settings</h2>
+          <button class="icon-btn panel-close-btn" id="settings-close-btn" aria-label="Close settings">✕</button>
+        </div>
+
+        <div class="panel-body">
+          <div class="settings-grid">
+
+            <div class="field-group">
+              <label class="field-label" for="s-width">Width (px)</label>
+              <input class="field-input" type="number" id="s-width" value="800" min="100" max="3840" />
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="s-height">Height (px)</label>
+              <input class="field-input" type="number" id="s-height" value="600" min="100" max="2160" />
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="s-scale">Device Scale</label>
+              <select class="field-input field-select" id="s-scale">
+                <option value="1">1x</option>
+                <option value="2" selected>2x (Retina)</option>
+                <option value="3">3x</option>
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="s-quality">Quality (1–100)</label>
+              <input class="field-input" type="number" id="s-quality" value="90" min="1" max="100" />
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="s-bg">Background Color</label>
+              <div class="color-row">
+                <input class="color-swatch" type="color" id="s-bg-picker" value="#ffffff" />
+                <input class="field-input" type="text" id="s-bg" value="#ffffff" maxlength="9" placeholder="#ffffff" />
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="s-format">File Type</label>
+              <select class="field-input field-select" id="s-format">
+                <option value="png" selected>PNG</option>
+                <option value="jpeg">JPEG</option>
+                <option value="webp">WebP</option>
+              </select>
+            </div>
+
+          </div>
+
+          <p class="settings-note">Settings are saved automatically to your account.</p>
+        </div>
+      </aside>
+
+      <!-- ── HISTORY PANEL ── -->
+      <aside class="side-panel hidden" id="history-panel" role="complementary" aria-label="Generation history">
+        <div class="panel-header">
+          <h2 class="panel-title">History</h2>
+          <button class="icon-btn panel-close-btn" id="history-close-btn" aria-label="Close history">✕</button>
+        </div>
+
+        <div class="panel-body" id="history-list">
+          <p class="empty-state">No images generated yet.<br/>Your history will appear here.</p>
+        </div>
+      </aside>
+
+      <!-- ── MAIN WORKSPACE ── -->
+      <main class="workspace" id="workspace">
+
+        <!-- Editors row -->
+        <div class="editors-row">
+
+          <!-- HTML Editor -->
+          <div class="editor-card">
+            <div class="editor-header">
+              <span class="editor-lang">HTML</span>
+              <button class="mini-btn" id="clear-html-btn" title="Clear HTML">Clear</button>
+            </div>
+            <textarea
+              class="code-editor"
+              id="html-input"
+              spellcheck="false"
+              autocorrect="off"
+              autocapitalize="off"
+              placeholder="<!-- Paste your HTML here -->
+<div class=&quot;card&quot;>
+  <h1>Hello HTTI</h1>
+  <p>Your subtitle here</p>
+</div>"
+            ></textarea>
+          </div>
+
+          <!-- CSS Editor -->
+          <div class="editor-card">
+            <div class="editor-header">
+              <span class="editor-lang">CSS</span>
+              <button class="mini-btn" id="clear-css-btn" title="Clear CSS">Clear</button>
+            </div>
+            <textarea
+              class="code-editor"
+              id="css-input"
+              spellcheck="false"
+              autocorrect="off"
+              autocapitalize="off"
+              placeholder="/* Paste your CSS here */
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #f0f0f0;
+  font-family: sans-serif;
+}
+.card {
+  background: white;
+  padding: 48px;
+  border-radius: 12px;
+  text-align: center;
+}"
+            ></textarea>
+          </div>
+
+        </div>
+
+        <!-- Generate button -->
+        <div class="generate-row">
+          <button class="btn btn-generate" id="generate-btn">
+            <span id="generate-label">Generate Image</span>
+            <span class="generate-spinner hidden" id="generate-spinner"></span>
+          </button>
+          <span class="generate-hint" id="generate-hint">
+            <!-- Shows rate limit or status info -->
+          </span>
+        </div>
+
+        <!-- Output section -->
+        <section class="output-section hidden" id="output-section" aria-live="polite">
+          <div class="output-header">
+            <span class="output-label">Output</span>
+            <div class="output-actions">
+              <a class="btn btn-sm" id="download-btn" download="htti-export.png">Download</a>
+              <button class="btn btn-sm btn-ghost" id="copy-url-btn">Copy URL</button>
+            </div>
+          </div>
+          <div class="output-image-wrap">
+            <img id="output-image" src="" alt="Generated image" />
+          </div>
+          <div class="output-meta" id="output-meta"></div>
+        </section>
+
+        <!-- Error section -->
+        <div class="error-banner hidden" id="error-banner" role="alert"></div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
