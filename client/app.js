@@ -11,14 +11,13 @@
 //    Get them from: Firebase Console → Project Settings → Your apps
 // ─────────────────────────────────────────────
 const FIREBASE_CONFIG = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_AUTH_DOMAIN",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey:            "AIzaSyC7OI7zrumGw9zbzluDgUzDcAdQpQO_IUk",
+  authDomain:        "htti-studio.firebaseapp.com",
+  projectId:         "htti-studio",
+  storageBucket:     "htti-studio.firebasestorage.app",
+  messagingSenderId: "104223911609",
+  appId:             "1:104223911609:web:0e07d41e3896c1084a7568"
 };
-
 // ─────────────────────────────────────────────
 // 2. BACKEND URL
 //    Change this to your Render/Railway backend URL in production.
