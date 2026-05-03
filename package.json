@@ -1,0 +1,12 @@
+{
+  "name": "htti-studio",
+  "version": "1.0.0",
+  "description": "HTTI Studio — HTML + CSS to image converter",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.2.0",
+    "node-fetch": "^2.7.0"
+  }
+}
