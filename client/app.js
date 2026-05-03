@@ -153,6 +153,13 @@ auth.onAuthStateChanged(async (user) => {
   }
 });
 
+// Handle redirect result from Google/GitHub sign-in
+auth.getRedirectResult().then((result) => {
+  // result.user is null if no redirect happened — that's fine
+}).catch((err) => {
+  if (err.code) showAuthError(friendlyAuthError(err.code));
+});
+
 // ─────────────────────────────────────────────
 // Called when user is authenticated
 // ─────────────────────────────────────────────
@@ -260,11 +267,9 @@ googleBtn.addEventListener("click", async () => {
   clearAuthError();
   const provider = new firebase.auth.GoogleAuthProvider();
   try {
-    await auth.signInWithPopup(provider);
+    await auth.signInWithRedirect(provider);
   } catch (err) {
-    if (err.code !== "auth/popup-closed-by-user") {
-      showAuthError(friendlyAuthError(err.code));
-    }
+    showAuthError(friendlyAuthError(err.code));
   }
 });
 
@@ -276,14 +281,11 @@ githubBtn.addEventListener("click", async () => {
   clearAuthError();
   const provider = new firebase.auth.GithubAuthProvider();
   try {
-    await auth.signInWithPopup(provider);
+    await auth.signInWithRedirect(provider);
   } catch (err) {
-    if (err.code !== "auth/popup-closed-by-user") {
-      showAuthError(friendlyAuthError(err.code));
-    }
+    showAuthError(friendlyAuthError(err.code));
   }
 });
-
 // ═══════════════════════════════════════════════════════════
 // LOGOUT
 // ═══════════════════════════════════════════════════════════
