@@ -785,9 +785,9 @@ function getInitials(str) {
 }
 
 // Convert Firebase auth error codes to friendly messages
-function friendlyAuthError(code) {
-  const map = {
-    "auth/invalid-email":            "Please enter a valid email address.",
+console.error("Firebase auth error code:", code);
+  showAuthError("DEBUG: " + code); // temporary
+const map = {  "auth/invalid-email":            "Please enter a valid email address.",
     "auth/user-not-found":           "No account found with this email.",
     "auth/wrong-password":           "Incorrect password. Please try again.",
     "auth/email-already-in-use":     "An account with this email already exists.",
