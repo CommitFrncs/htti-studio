@@ -156,9 +156,12 @@ auth.onAuthStateChanged(async (user) => {
 auth.getRedirectResult().then((result) => {
   // result.user is null if no redirect happened — that's fine
 }).catch((err) => {
-  if (err.code) showAuthError(friendlyAuthError(err.code));
+  // Only show error if it's a real auth failure, not a config/init issue
+  const ignoredCodes = ["auth/operation-not-supported-in-this-environment"];
+  if (err.code && !ignoredCodes.includes(err.code)) {
+    showAuthError("DEBUG: " + err.code);
+  }
 });
-
 // ─────────────────────────────────────────────
 // Called when user is authenticated
 // ─────────────────────────────────────────────
