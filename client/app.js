@@ -1,14 +1,12 @@
 /* ═══════════════════════════════════════════════════════════
-   HTTI Studio — app.js
-   Vanilla JS | Firebase Auth + Firestore | HTTI API via backend
+   HTTI Studio — app.js (v3)
+   Vanilla JS | Firebase Auth + Firestore | Netlify Functions
    ═══════════════════════════════════════════════════════════ */
 
 "use strict";
 
 // ─────────────────────────────────────────────
-// 1. FIREBASE CONFIGURATION
-//    Replace these values with your own Firebase project config.
-//    Get them from: Firebase Console → Project Settings → Your apps
+// FIREBASE CONFIG — paste your real values here
 // ─────────────────────────────────────────────
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyC7OI7zrumGw9zbzluDgUzDcAdQpQO_IUk",
@@ -18,23 +16,117 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "104223911609",
   appId:             "1:104223911609:web:0e07d41e3896c1084a7568"
 };
+
 // ─────────────────────────────────────────────
-// 2. BACKEND URL
-//    Change this to your Render/Railway backend URL in production.
-//    For local development: http://localhost:4000
+// BACKEND — Netlify Function endpoint
 // ─────────────────────────────────────────────
-// Netlify Functions are served from the same domain automatically.
-// No need to change this — it works for both localhost and production.
 const BACKEND_URL = "/.netlify/functions";
 
 // ─────────────────────────────────────────────
-// 3. RATE LIMIT (client-side guard)
-//    5 generations per user per 60 seconds (backend also enforces this)
+// RATE LIMIT (client-side)
 // ─────────────────────────────────────────────
 const RATE_LIMIT = { max: 5, windowMs: 60_000 };
 
 // ─────────────────────────────────────────────
-// 4. DEFAULT USER SETTINGS
+// DEMO PRELOAD — shown on first login
+// A dev-themed card demonstrating the tool
+// ─────────────────────────────────────────────
+const DEMO_HTML = `<div class="card">
+  <div class="card-top">
+    <div class="card-icon">⚡</div>
+    <div class="card-tag">HTTI STUDIO</div>
+  </div>
+  <h1 class="card-title">Turn code<br/>into images.</h1>
+  <p class="card-desc">Paste HTML + CSS.<br/>Get a pixel-perfect image.</p>
+  <div class="card-footer">
+    <span class="card-label">htmlcsstoimage API</span>
+    <span class="card-arrow">→</span>
+  </div>
+</div>`;
+
+const DEMO_CSS = `* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0A0A0A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: 'Syne', sans-serif;
+  padding: 32px;
+}
+
+.card {
+  background: #111111;
+  border: 1px solid #2A2A2A;
+  border-radius: 16px;
+  padding: 36px;
+  max-width: 400px;
+  width: 100%;
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.card-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.card-tag {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: #D4F53C;
+  background: rgba(212,245,60,0.1);
+  border: 1px solid rgba(212,245,60,0.2);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: 'DM Mono', monospace;
+}
+
+.card-title {
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: #F0F0F0;
+  margin-bottom: 16px;
+}
+
+.card-desc {
+  font-size: 15px;
+  color: #888;
+  line-height: 1.7;
+  font-family: 'DM Mono', monospace;
+  margin-bottom: 32px;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 20px;
+  border-top: 1px solid #1E1E1E;
+}
+
+.card-label {
+  font-size: 11px;
+  color: #505050;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.04em;
+}
+
+.card-arrow {
+  font-size: 20px;
+  color: #D4F53C;
+}`;
+
+// ─────────────────────────────────────────────
+// DEFAULT SETTINGS
 // ─────────────────────────────────────────────
 const DEFAULT_SETTINGS = {
   width:       800,
@@ -55,31 +147,28 @@ firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-// Firestore settings path helper
-const userDocRef = (uid) => db.collection("users").doc(uid).collection("settings").doc("prefs");
+const userDocRef    = (uid) => db.collection("users").doc(uid).collection("settings").doc("prefs");
 const historyColRef = (uid) => db.collection("users").doc(uid).collection("history");
 
 // ═══════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════
 
-let currentUser    = null;
-let userSettings   = { ...DEFAULT_SETTINGS };
+let currentUser       = null;
+let userSettings      = { ...DEFAULT_SETTINGS };
 let saveDebounceTimer = null;
-let requestTimestamps = [];   // for client-side rate limiting
-let settingsPanelOpen = false;
-let historyPanelOpen  = false;
+let codeDebounceTimer = null;
+let requestTimestamps = [];
+let settingsOpen      = false;
+let historyOpen       = false;
+let activeTab         = "html";
 
 // ═══════════════════════════════════════════════════════════
-// DOM REFERENCES
+// DOM — AUTH
 // ═══════════════════════════════════════════════════════════
 
-// Screens
-const authScreen = document.getElementById("auth-screen");
-const appScreen  = document.getElementById("app-screen");
-
-// Auth
-const authCard       = document.getElementById("auth-card");
+const authScreen     = document.getElementById("auth-screen");
+const appScreen      = document.getElementById("app-screen");
 const authError      = document.getElementById("auth-error");
 const authForm       = document.getElementById("auth-form");
 const authTabs       = document.querySelectorAll(".auth-tab");
@@ -93,53 +182,72 @@ const authSpinner    = authSubmitBtn.querySelector(".btn-spinner");
 const googleBtn      = document.getElementById("google-btn");
 const githubBtn      = document.getElementById("github-btn");
 
-// Nav
-const historyToggleBtn = document.getElementById("history-toggle-btn");
-const settingsToggleBtn= document.getElementById("settings-toggle-btn");
-const userAvatarBtn    = document.getElementById("user-avatar-btn");
+// ═══════════════════════════════════════════════════════════
+// DOM — APP
+// ═══════════════════════════════════════════════════════════
+
+const userAvatarBtn      = document.getElementById("user-avatar-btn");
 const userAvatarInitials = document.getElementById("user-avatar-initials");
-const userDropdown     = document.getElementById("user-dropdown");
-const dropdownName     = document.getElementById("dropdown-display-name");
-const dropdownEmail    = document.getElementById("dropdown-email");
-const logoutBtn        = document.getElementById("logout-btn");
+const userDropdown       = document.getElementById("user-dropdown");
+const dropdownName       = document.getElementById("dropdown-display-name");
+const dropdownEmail      = document.getElementById("dropdown-email");
+const logoutBtn          = document.getElementById("logout-btn");
+const historyToggleBtn   = document.getElementById("history-toggle-btn");
+const settingsToggleBtn  = document.getElementById("settings-toggle-btn");
 
-// Settings panel
-const settingsPanel    = document.getElementById("settings-panel");
+// Tabs
+const tabs       = document.querySelectorAll(".tab");
+const panelHtml  = document.getElementById("panel-html");
+const panelCss   = document.getElementById("panel-css");
+const panelPreview = document.getElementById("panel-preview");
+
+// Editors
+const htmlInput   = document.getElementById("html-input");
+const cssInput    = document.getElementById("css-input");
+const clearHtmlBtn= document.getElementById("clear-html-btn");
+const clearCssBtn = document.getElementById("clear-css-btn");
+
+// Preview states
+const previewEmpty   = document.getElementById("preview-empty");
+const previewLoading = document.getElementById("preview-loading");
+const previewResult  = document.getElementById("preview-result");
+const previewError   = document.getElementById("preview-error");
+const outputImage    = document.getElementById("output-image");
+const outputMeta     = document.getElementById("output-meta");
+const downloadBtn    = document.getElementById("download-btn");
+const copyUrlBtn     = document.getElementById("copy-url-btn");
+const errorMessage   = document.getElementById("error-message");
+const retryBtn       = document.getElementById("retry-btn");
+
+// Generate
+const generateBtn    = document.getElementById("generate-btn");
+const generateLabel  = document.getElementById("generate-label");
+const generateSpinner= document.getElementById("generate-spinner");
+
+// Settings drawer
+const settingsPanel  = document.getElementById("settings-panel");
+const settingsOverlay= document.getElementById("settings-overlay");
 const settingsCloseBtn = document.getElementById("settings-close-btn");
-const sWidth    = document.getElementById("s-width");
-const sHeight   = document.getElementById("s-height");
-const sScale    = document.getElementById("s-scale");
-const sQuality  = document.getElementById("s-quality");
-const sBg       = document.getElementById("s-bg");
-const sBgPicker = document.getElementById("s-bg-picker");
-const sFormat   = document.getElementById("s-format");
+const sWidth         = document.getElementById("s-width");
+const sHeight        = document.getElementById("s-height");
+const sScale         = document.getElementById("s-scale");
+const sQuality       = document.getElementById("s-quality");
+const sBg            = document.getElementById("s-bg");
+const sBgPicker      = document.getElementById("s-bg-picker");
+const sFormat        = document.getElementById("s-format");
+const formatRadios   = document.querySelectorAll('input[name="format"]');
 
-// History panel
-const historyPanel    = document.getElementById("history-panel");
-const historyCloseBtn = document.getElementById("history-close-btn");
-const historyList     = document.getElementById("history-list");
-
-// Workspace
-const htmlInput     = document.getElementById("html-input");
-const cssInput      = document.getElementById("css-input");
-const clearHtmlBtn  = document.getElementById("clear-html-btn");
-const clearCssBtn   = document.getElementById("clear-css-btn");
-const generateBtn   = document.getElementById("generate-btn");
-const generateLabel = document.getElementById("generate-label");
-const generateSpinner = document.getElementById("generate-spinner");
-const generateHint  = document.getElementById("generate-hint");
-const outputSection = document.getElementById("output-section");
-const downloadBtn   = document.getElementById("download-btn");
-const copyUrlBtn    = document.getElementById("copy-url-btn");
-const outputImage   = document.getElementById("output-image");
-const outputMeta    = document.getElementById("output-meta");
-const errorBanner   = document.getElementById("error-banner");
+// History drawer
+const historyPanel   = document.getElementById("history-panel");
+const historyOverlay = document.getElementById("history-overlay");
+const historyCloseBtn= document.getElementById("history-close-btn");
+const historyList    = document.getElementById("history-list");
 
 // Toast
 const toast = document.getElementById("toast");
 
 // ═══════════════════════════════════════════════════════════
-// AUTH STATE LISTENER
+// FIREBASE AUTH STATE
 // ═══════════════════════════════════════════════════════════
 
 auth.onAuthStateChanged(async (user) => {
@@ -152,49 +260,41 @@ auth.onAuthStateChanged(async (user) => {
   }
 });
 
-// Handle redirect result from Google/GitHub sign-in
-auth.getRedirectResult().then((result) => {
-  // result.user is null if no redirect happened — that's fine
+// Handle Google/GitHub redirect result
+auth.getRedirectResult().then(() => {
+  // Handled by onAuthStateChanged
 }).catch((err) => {
-  // Only show error if it's a real auth failure, not a config/init issue
-  const ignoredCodes = ["auth/operation-not-supported-in-this-environment"];
-  if (err.code && !ignoredCodes.includes(err.code)) {
-    showAuthError("DEBUG: " + err.code);
+  const ignored = ["auth/operation-not-supported-in-this-environment"];
+  if (err.code && !ignored.includes(err.code)) {
+    showAuthError(friendlyAuthError(err.code));
   }
 });
-// ─────────────────────────────────────────────
-// Called when user is authenticated
+
 // ─────────────────────────────────────────────
 async function onUserLogin(user) {
-  // Update nav UI
-  const initials = getInitials(user.displayName || user.email);
-  userAvatarInitials.textContent = initials;
+  userAvatarInitials.textContent = getInitials(user.displayName || user.email);
   dropdownName.textContent  = user.displayName || "User";
   dropdownEmail.textContent = user.email || "—";
 
-  // Load settings from Firestore
   await loadSettings(user.uid);
-
-  // Switch to app screen
   showScreen("app");
 }
 
 // ═══════════════════════════════════════════════════════════
-// SCREEN MANAGEMENT
+// SCREEN SWITCHER
 // ═══════════════════════════════════════════════════════════
 
 function showScreen(name) {
-  authScreen.classList.remove("active");
-  appScreen.classList.remove("active");
-
   if (name === "auth") {
     authScreen.classList.add("active");
-    authScreen.style.display = "flex";
-    appScreen.style.display  = "none";
+    authScreen.style.display = "";
+    appScreen.classList.remove("active");
+    appScreen.style.display = "none";
   } else {
+    authScreen.classList.remove("active");
     authScreen.style.display = "none";
-    appScreen.style.display  = "block";
     appScreen.classList.add("active");
+    appScreen.style.display = "";
   }
 }
 
@@ -202,21 +302,19 @@ function showScreen(name) {
 // AUTH TABS
 // ═══════════════════════════════════════════════════════════
 
-let currentAuthMode = "login"; // "login" | "signup"
+let authMode = "login";
 
 authTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     authTabs.forEach(t => t.classList.remove("active"));
     tab.classList.add("active");
-
-    currentAuthMode = tab.dataset.tab;
+    authMode = tab.dataset.tab;
     clearAuthError();
-
-    if (currentAuthMode === "signup") {
-      nameGroup.style.display = "flex";
+    if (authMode === "signup") {
+      nameGroup.classList.remove("hidden");
       authSubmitLabel.textContent = "Create Account";
     } else {
-      nameGroup.style.display = "none";
+      nameGroup.classList.add("hidden");
       authSubmitLabel.textContent = "Sign In";
     }
   });
@@ -234,27 +332,17 @@ authForm.addEventListener("submit", async (e) => {
   const password = authPassword.value;
   const name     = authName.value.trim();
 
-  // Basic validation
-  if (!email || !password) {
-    showAuthError("Please fill in all fields.");
-    return;
-  }
-  if (password.length < 6) {
-    showAuthError("Password must be at least 6 characters.");
-    return;
-  }
+  if (!email || !password) { showAuthError("Please fill in all fields."); return; }
+  if (password.length < 6) { showAuthError("Password must be at least 6 characters."); return; }
 
   setAuthLoading(true);
-
   try {
-    if (currentAuthMode === "signup") {
+    if (authMode === "signup") {
       const cred = await auth.createUserWithEmailAndPassword(email, password);
-      // Set display name
       if (name) await cred.user.updateProfile({ displayName: name });
     } else {
       await auth.signInWithEmailAndPassword(email, password);
     }
-    // onAuthStateChanged handles the rest
   } catch (err) {
     showAuthError(friendlyAuthError(err.code));
     setAuthLoading(false);
@@ -262,7 +350,7 @@ authForm.addEventListener("submit", async (e) => {
 });
 
 // ═══════════════════════════════════════════════════════════
-// OAUTH — GOOGLE
+// GOOGLE / GITHUB AUTH
 // ═══════════════════════════════════════════════════════════
 
 googleBtn.addEventListener("click", async () => {
@@ -275,10 +363,6 @@ googleBtn.addEventListener("click", async () => {
   }
 });
 
-// ═══════════════════════════════════════════════════════════
-// OAUTH — GITHUB
-// ═══════════════════════════════════════════════════════════
-
 githubBtn.addEventListener("click", async () => {
   clearAuthError();
   const provider = new firebase.auth.GithubAuthProvider();
@@ -288,6 +372,7 @@ githubBtn.addEventListener("click", async () => {
     showAuthError(friendlyAuthError(err.code));
   }
 });
+
 // ═══════════════════════════════════════════════════════════
 // LOGOUT
 // ═══════════════════════════════════════════════════════════
@@ -295,38 +380,29 @@ githubBtn.addEventListener("click", async () => {
 logoutBtn.addEventListener("click", async () => {
   closeDropdown();
   await auth.signOut();
-  // Reset state
   userSettings = { ...DEFAULT_SETTINGS };
-  outputSection.classList.add("hidden");
-  errorBanner.classList.add("hidden");
-  historyList.innerHTML = '<p class="empty-state">No images generated yet.<br/>Your history will appear here.</p>';
+  htmlInput.value = "";
+  cssInput.value  = "";
+  showPreviewState("empty");
+  historyList.innerHTML = '<p class="empty-state">No images yet.<br/>History shows here after you generate.</p>';
 });
 
 // ═══════════════════════════════════════════════════════════
-// USER SETTINGS — LOAD FROM FIRESTORE
+// SETTINGS — LOAD FROM FIRESTORE
 // ═══════════════════════════════════════════════════════════
 
 async function loadSettings(uid) {
   try {
     const snap = await userDocRef(uid).get();
-    if (snap.exists) {
-      // Merge with defaults (handles new fields added later)
-      userSettings = { ...DEFAULT_SETTINGS, ...snap.data() };
-    } else {
-      userSettings = { ...DEFAULT_SETTINGS };
-    }
-  } catch (err) {
-    console.warn("Could not load settings:", err.message);
+    userSettings = snap.exists
+      ? { ...DEFAULT_SETTINGS, ...snap.data() }
+      : { ...DEFAULT_SETTINGS };
+  } catch {
     userSettings = { ...DEFAULT_SETTINGS };
   }
-
-  // Apply to UI
   applySettingsToUI();
 }
 
-// ─────────────────────────────────────────────
-// Populate settings form from userSettings state
-// ─────────────────────────────────────────────
 function applySettingsToUI() {
   sWidth.value    = userSettings.width;
   sHeight.value   = userSettings.height;
@@ -336,13 +412,22 @@ function applySettingsToUI() {
   sBgPicker.value = userSettings.bgColor;
   sFormat.value   = userSettings.fileType;
 
-  // Restore last used code
-  if (userSettings.lastHtml) htmlInput.value = userSettings.lastHtml;
-  if (userSettings.lastCss)  cssInput.value  = userSettings.lastCss;
+  // Sync radio buttons
+  formatRadios.forEach(r => { r.checked = r.value === userSettings.fileType; });
+
+  // Load last used code, or demo if first time
+  if (userSettings.lastHtml) {
+    htmlInput.value = userSettings.lastHtml;
+    cssInput.value  = userSettings.lastCss || "";
+  } else {
+    // First login — load demo code
+    htmlInput.value = DEMO_HTML;
+    cssInput.value  = DEMO_CSS;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
-// USER SETTINGS — SAVE TO FIRESTORE (debounced)
+// SETTINGS — SAVE TO FIRESTORE
 // ═══════════════════════════════════════════════════════════
 
 function saveSettings() {
@@ -354,12 +439,9 @@ function saveSettings() {
     } catch (err) {
       console.warn("Settings save failed:", err.message);
     }
-  }, 800); // Save 800ms after last change
+  }, 800);
 }
 
-// ─────────────────────────────────────────────
-// Listen for settings form changes
-// ─────────────────────────────────────────────
 function onSettingsChange() {
   userSettings.width       = parseInt(sWidth.value, 10)   || 800;
   userSettings.height      = parseInt(sHeight.value, 10)  || 600;
@@ -370,30 +452,55 @@ function onSettingsChange() {
   saveSettings();
 }
 
-[sWidth, sHeight, sQuality, sBg, sScale, sFormat].forEach((el) => {
+[sWidth, sHeight, sQuality, sBg, sScale, sFormat].forEach(el => {
   el.addEventListener("change", onSettingsChange);
   el.addEventListener("input",  onSettingsChange);
 });
 
-// Sync color picker ↔ text field
-sBgPicker.addEventListener("input", () => {
-  sBg.value = sBgPicker.value;
+// Color picker sync
+sBgPicker.addEventListener("input", () => { sBg.value = sBgPicker.value; onSettingsChange(); });
+sBg.addEventListener("input", () => {
+  if (/^#[0-9A-Fa-f]{6}$/.test(sBg.value)) sBgPicker.value = sBg.value;
   onSettingsChange();
 });
 
-sBg.addEventListener("input", () => {
-  // Only update picker if it looks like a valid hex
-  if (/^#[0-9A-Fa-f]{6}$/.test(sBg.value)) {
-    sBgPicker.value = sBg.value;
-  }
-  onSettingsChange();
+// Format radio buttons
+formatRadios.forEach(r => {
+  r.addEventListener("change", () => {
+    sFormat.value = r.value;
+    onSettingsChange();
+  });
 });
+
+// ═══════════════════════════════════════════════════════════
+// TAB NAVIGATION
+// ═══════════════════════════════════════════════════════════
+
+tabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    switchTab(tab.dataset.tab);
+  });
+});
+
+function switchTab(name) {
+  activeTab = name;
+
+  // Update tab bar
+  tabs.forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+
+  // Show correct panel
+  [panelHtml, panelCss, panelPreview].forEach(p => p.classList.remove("active"));
+  if (name === "html")    panelHtml.classList.add("active");
+  if (name === "css")     panelCss.classList.add("active");
+  if (name === "preview") panelPreview.classList.add("active");
+}
 
 // ═══════════════════════════════════════════════════════════
 // GENERATE IMAGE
 // ═══════════════════════════════════════════════════════════
 
 generateBtn.addEventListener("click", handleGenerate);
+retryBtn.addEventListener("click", handleGenerate);
 
 async function handleGenerate() {
   if (!currentUser) return;
@@ -401,34 +508,33 @@ async function handleGenerate() {
   const html = htmlInput.value.trim();
   const css  = cssInput.value.trim();
 
-  // Validate
   if (!html) {
-    showError("HTML input is empty. Please add some HTML.");
+    showToast("HTML is empty. Add some HTML first.", "error");
+    switchTab("html");
     return;
   }
 
-  // Client-side rate limit check
+  // Client-side rate limit
   const now = Date.now();
   requestTimestamps = requestTimestamps.filter(t => now - t < RATE_LIMIT.windowMs);
   if (requestTimestamps.length >= RATE_LIMIT.max) {
     const wait = Math.ceil((RATE_LIMIT.windowMs - (now - requestTimestamps[0])) / 1000);
-    showError(`Rate limit reached. Please wait ${wait}s before generating again.`);
+    showToast(`Rate limit. Wait ${wait}s.`, "error");
     return;
   }
 
-  // Save current code to settings
+  // Save code
   userSettings.lastHtml = html;
   userSettings.lastCss  = css;
   saveSettings();
 
-  // Show loading state
+  // Switch to preview tab to show loading
+  switchTab("preview");
+  showPreviewState("loading");
   setGenerating(true);
-  hideError();
-  outputSection.classList.add("hidden");
 
   try {
-    // Get a fresh Firebase ID token (sent to backend for auth verification)
-    const idToken = await currentUser.getIdToken(/* forceRefresh */ true);
+    const idToken = await currentUser.getIdToken(true);
 
     const response = await fetch(`${BACKEND_URL}/generate`, {
       method: "POST",
@@ -450,17 +556,14 @@ async function handleGenerate() {
 
     const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.error || `Server error ${response.status}`);
-    }
+    if (!response.ok) throw new Error(data.error || `Error ${response.status}`);
 
-    // Record timestamp for rate limiting
     requestTimestamps.push(Date.now());
 
-    // Show output
-    displayOutput(data.url, data.width, data.height, data.fileType);
+    // Show result
+    displayResult(data.url, data.width, data.height, data.fileType);
 
-    // Save to Firestore history
+    // Save history
     await saveToHistory({
       imageUrl:  data.url,
       html,
@@ -471,250 +574,44 @@ async function handleGenerate() {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    // Refresh history panel if open
-    if (historyPanelOpen) loadHistory();
-
     showToast("Image generated!", "success");
 
   } catch (err) {
-    showError(err.message || "Something went wrong. Please try again.");
+    showPreviewState("error", err.message || "Something went wrong.");
   } finally {
     setGenerating(false);
   }
 }
 
 // ─────────────────────────────────────────────
-// Display the generated image in the output section
-// ─────────────────────────────────────────────
-function displayOutput(url, width, height, fileType) {
+function displayResult(url, width, height, fileType) {
   outputImage.src = url;
-  outputImage.onload = () => {
-    outputSection.classList.remove("hidden");
-  };
-  outputImage.onerror = () => {
-    showError("Image URL was returned but could not be loaded. Try downloading directly.");
-    outputSection.classList.remove("hidden"); // still show download
-  };
-
-  // Set download link
-  const filename = `htti-export-${Date.now()}.${fileType || "png"}`;
+  const filename  = `htti-${Date.now()}.${fileType || "png"}`;
   downloadBtn.href     = url;
   downloadBtn.download = filename;
-  downloadBtn.setAttribute("href", url);
-
-  // Meta info
-  outputMeta.textContent = `${width || "?"}×${height || "?"} px — ${(fileType || "png").toUpperCase()}`;
+  outputMeta.textContent = `${width || "?"}×${height || "?"} · ${(fileType || "PNG").toUpperCase()}`;
+  showPreviewState("result");
 }
 
 // ─────────────────────────────────────────────
-// Copy image URL to clipboard
+// Show one of: empty | loading | result | error
 // ─────────────────────────────────────────────
-copyUrlBtn.addEventListener("click", () => {
-  const url = outputImage.src;
-  if (!url || url === window.location.href) return;
+function showPreviewState(state, message = "") {
+  previewEmpty.classList.add("hidden");
+  previewLoading.classList.add("hidden");
+  previewResult.classList.add("hidden");
+  previewError.classList.add("hidden");
 
-  navigator.clipboard.writeText(url).then(() => {
-    showToast("URL copied to clipboard!", "success");
-  }).catch(() => {
-    // Fallback for older browsers
-    const input = document.createElement("input");
-    input.value = url;
-    document.body.appendChild(input);
-    input.select();
-    document.execCommand("copy");
-    document.body.removeChild(input);
-    showToast("URL copied!", "success");
-  });
-});
-
-// ═══════════════════════════════════════════════════════════
-// HISTORY
-// ═══════════════════════════════════════════════════════════
-
-// Save a generated image to Firestore history
-async function saveToHistory(entry) {
-  if (!currentUser) return;
-  try {
-    await historyColRef(currentUser.uid).add(entry);
-  } catch (err) {
-    console.warn("Could not save history:", err.message);
+  if (state === "empty")   previewEmpty.classList.remove("hidden");
+  if (state === "loading") previewLoading.classList.remove("hidden");
+  if (state === "result")  previewResult.classList.remove("hidden");
+  if (state === "error") {
+    previewError.classList.remove("hidden");
+    errorMessage.textContent = message || "Something went wrong.";
   }
 }
 
-// Load and render history from Firestore
-async function loadHistory() {
-  if (!currentUser) return;
-
-  historyList.innerHTML = '<p class="empty-state">Loading history…</p>';
-
-  try {
-    const snap = await historyColRef(currentUser.uid)
-      .orderBy("createdAt", "desc")
-      .limit(20)
-      .get();
-
-    if (snap.empty) {
-      historyList.innerHTML = '<p class="empty-state">No images generated yet.<br/>Your history will appear here.</p>';
-      return;
-    }
-
-    historyList.innerHTML = "";
-
-    snap.forEach((doc) => {
-      const d = doc.data();
-      const el = buildHistoryItem(d);
-      historyList.appendChild(el);
-    });
-
-  } catch (err) {
-    historyList.innerHTML = `<p class="empty-state" style="color:var(--danger)">Could not load history: ${err.message}</p>`;
-  }
-}
-
-// Build a single history card DOM element
-function buildHistoryItem(data) {
-  const wrap = document.createElement("div");
-  wrap.className = "history-item";
-
-  const thumb = document.createElement("img");
-  thumb.className = "history-thumb";
-  thumb.src     = data.imageUrl || "";
-  thumb.alt     = "Generated image";
-  thumb.loading = "lazy";
-
-  const meta = document.createElement("div");
-  meta.className = "history-meta";
-
-  const date = data.createdAt?.toDate?.()
-    ? data.createdAt.toDate().toLocaleString()
-    : "Recent";
-
-  meta.innerHTML = `
-    <span class="history-date">${date}</span>
-    <span class="history-dims">${data.width || "?"}×${data.height || "?"} · ${(data.fileType || "png").toUpperCase()}</span>
-    <button class="history-load-btn">↩ Reload design</button>
-  `;
-
-  // Reload design on click
-  meta.querySelector(".history-load-btn").addEventListener("click", () => {
-    if (data.html) htmlInput.value = data.html;
-    if (data.css)  cssInput.value  = data.css;
-    closeHistoryPanel();
-    showToast("Design loaded from history", "success");
-    // Scroll to top of workspace
-    document.getElementById("workspace").scrollIntoView({ behavior: "smooth" });
-  });
-
-  wrap.appendChild(thumb);
-  wrap.appendChild(meta);
-  return wrap;
-}
-
-// ═══════════════════════════════════════════════════════════
-// PANEL TOGGLES
-// ═══════════════════════════════════════════════════════════
-
-// Settings panel
-settingsToggleBtn.addEventListener("click", () => {
-  if (settingsPanelOpen) {
-    closeSettingsPanel();
-  } else {
-    closeHistoryPanel();
-    openSettingsPanel();
-  }
-});
-
-settingsCloseBtn.addEventListener("click", closeSettingsPanel);
-
-function openSettingsPanel() {
-  settingsPanel.classList.remove("hidden");
-  settingsPanelOpen = true;
-  settingsToggleBtn.classList.add("active");
-}
-
-function closeSettingsPanel() {
-  settingsPanel.classList.add("hidden");
-  settingsPanelOpen = false;
-  settingsToggleBtn.classList.remove("active");
-}
-
-// History panel
-historyToggleBtn.addEventListener("click", () => {
-  if (historyPanelOpen) {
-    closeHistoryPanel();
-  } else {
-    closeSettingsPanel();
-    openHistoryPanel();
-  }
-});
-
-historyCloseBtn.addEventListener("click", closeHistoryPanel);
-
-function openHistoryPanel() {
-  historyPanel.classList.remove("hidden");
-  historyPanelOpen = true;
-  historyToggleBtn.classList.add("active");
-  loadHistory();
-}
-
-function closeHistoryPanel() {
-  historyPanel.classList.add("hidden");
-  historyPanelOpen = false;
-  historyToggleBtn.classList.remove("active");
-}
-
-// ═══════════════════════════════════════════════════════════
-// USER DROPDOWN
-// ═══════════════════════════════════════════════════════════
-
-userAvatarBtn.addEventListener("click", (e) => {
-  e.stopPropagation();
-  userDropdown.classList.toggle("hidden");
-});
-
-// Close dropdown when clicking outside
-document.addEventListener("click", (e) => {
-  if (!userAvatarBtn.contains(e.target) && !userDropdown.contains(e.target)) {
-    closeDropdown();
-  }
-});
-
-function closeDropdown() {
-  userDropdown.classList.add("hidden");
-}
-
-// ═══════════════════════════════════════════════════════════
-// EDITOR CLEAR BUTTONS
-// ═══════════════════════════════════════════════════════════
-
-clearHtmlBtn.addEventListener("click", () => {
-  htmlInput.value = "";
-  htmlInput.focus();
-});
-
-clearCssBtn.addEventListener("click", () => {
-  cssInput.value = "";
-  cssInput.focus();
-});
-
-// Auto-save code changes to settings (debounced)
-let codeSaveTimer = null;
-function debouncedCodeSave() {
-  clearTimeout(codeSaveTimer);
-  codeSaveTimer = setTimeout(() => {
-    userSettings.lastHtml = htmlInput.value;
-    userSettings.lastCss  = cssInput.value;
-    saveSettings();
-  }, 1500);
-}
-
-htmlInput.addEventListener("input", debouncedCodeSave);
-cssInput.addEventListener("input", debouncedCodeSave);
-
-// ═══════════════════════════════════════════════════════════
-// LOADING STATES
-// ═══════════════════════════════════════════════════════════
-
+// ─────────────────────────────────────────────
 function setGenerating(loading) {
   generateBtn.disabled = loading;
   if (loading) {
@@ -726,34 +623,194 @@ function setGenerating(loading) {
   }
 }
 
-function setAuthLoading(loading) {
-  authSubmitBtn.disabled = loading;
-  if (loading) {
-    authSubmitLabel.classList.add("hidden");
-    authSpinner.classList.remove("hidden");
-  } else {
-    authSubmitLabel.classList.remove("hidden");
-    authSpinner.classList.add("hidden");
+// ═══════════════════════════════════════════════════════════
+// COPY URL
+// ═══════════════════════════════════════════════════════════
+
+copyUrlBtn.addEventListener("click", () => {
+  const url = outputImage.src;
+  if (!url) return;
+  navigator.clipboard.writeText(url)
+    .then(() => showToast("URL copied!", "success"))
+    .catch(() => {
+      const i = document.createElement("input");
+      i.value = url;
+      document.body.appendChild(i);
+      i.select();
+      document.execCommand("copy");
+      document.body.removeChild(i);
+      showToast("URL copied!", "success");
+    });
+});
+
+// ═══════════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════════
+
+async function saveToHistory(entry) {
+  if (!currentUser) return;
+  try {
+    await historyColRef(currentUser.uid).add(entry);
+  } catch (err) {
+    console.warn("History save failed:", err.message);
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// ERROR / TOAST HELPERS
-// ═══════════════════════════════════════════════════════════
+async function loadHistory() {
+  if (!currentUser) return;
+  historyList.innerHTML = '<p class="empty-state">Loading…</p>';
+  try {
+    const snap = await historyColRef(currentUser.uid)
+      .orderBy("createdAt", "desc")
+      .limit(20)
+      .get();
 
-function showError(message) {
-  errorBanner.textContent = `⚠ ${message}`;
-  errorBanner.classList.remove("hidden");
-  errorBanner.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (snap.empty) {
+      historyList.innerHTML = '<p class="empty-state">No images yet.<br/>History shows here after you generate.</p>';
+      return;
+    }
+    historyList.innerHTML = "";
+    snap.forEach(doc => historyList.appendChild(buildHistoryItem(doc.data())));
+  } catch (err) {
+    historyList.innerHTML = `<p class="empty-state" style="color:var(--danger)">Failed to load: ${err.message}</p>`;
+  }
 }
 
-function hideError() {
-  errorBanner.classList.add("hidden");
-  errorBanner.textContent = "";
+function buildHistoryItem(data) {
+  const wrap  = document.createElement("div");
+  wrap.className = "history-item";
+  const thumb = document.createElement("img");
+  thumb.className = "history-thumb";
+  thumb.src     = data.imageUrl || "";
+  thumb.alt     = "Generated image";
+  thumb.loading = "lazy";
+  const meta  = document.createElement("div");
+  meta.className = "history-meta";
+  const date  = data.createdAt?.toDate?.()
+    ? data.createdAt.toDate().toLocaleString() : "Recent";
+  meta.innerHTML = `
+    <span class="history-date">${date}</span>
+    <span class="history-dims">${data.width || "?"}×${data.height || "?"} · ${(data.fileType || "png").toUpperCase()}</span>
+    <button class="history-load-btn">↩ Reload design</button>
+  `;
+  meta.querySelector(".history-load-btn").addEventListener("click", () => {
+    if (data.html) htmlInput.value = data.html;
+    if (data.css)  cssInput.value  = data.css;
+    closeHistory();
+    switchTab("html");
+    showToast("Design loaded", "success");
+  });
+  wrap.appendChild(thumb);
+  wrap.appendChild(meta);
+  return wrap;
 }
 
-function showAuthError(message) {
-  authError.textContent = message;
+// ═══════════════════════════════════════════════════════════
+// DRAWERS — SETTINGS
+// ═══════════════════════════════════════════════════════════
+
+settingsToggleBtn.addEventListener("click", () => {
+  settingsOpen ? closeSettings() : openSettings();
+});
+settingsCloseBtn.addEventListener("click", closeSettings);
+settingsOverlay.addEventListener("click", closeSettings);
+
+function openSettings() {
+  closeHistory();
+  settingsPanel.classList.remove("hidden");
+  settingsOverlay.classList.remove("hidden");
+  settingsToggleBtn.classList.add("active");
+  settingsOpen = true;
+}
+
+function closeSettings() {
+  settingsPanel.classList.add("hidden");
+  settingsOverlay.classList.add("hidden");
+  settingsToggleBtn.classList.remove("active");
+  settingsOpen = false;
+}
+
+// ─────────────────────────────────────────────
+// DRAWERS — HISTORY
+// ─────────────────────────────────────────────
+
+historyToggleBtn.addEventListener("click", () => {
+  historyOpen ? closeHistory() : openHistory();
+});
+historyCloseBtn.addEventListener("click", closeHistory);
+historyOverlay.addEventListener("click", closeHistory);
+
+function openHistory() {
+  closeSettings();
+  historyPanel.classList.remove("hidden");
+  historyOverlay.classList.remove("hidden");
+  historyToggleBtn.classList.add("active");
+  historyOpen = true;
+  loadHistory();
+}
+
+function closeHistory() {
+  historyPanel.classList.add("hidden");
+  historyOverlay.classList.add("hidden");
+  historyToggleBtn.classList.remove("active");
+  historyOpen = false;
+}
+
+// ═══════════════════════════════════════════════════════════
+// USER DROPDOWN
+// ═══════════════════════════════════════════════════════════
+
+userAvatarBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  userDropdown.classList.toggle("hidden");
+});
+
+document.addEventListener("click", (e) => {
+  if (!userAvatarBtn.contains(e.target)) closeDropdown();
+});
+
+function closeDropdown() {
+  userDropdown.classList.add("hidden");
+}
+
+// ═══════════════════════════════════════════════════════════
+// EDITOR CLEAR
+// ═══════════════════════════════════════════════════════════
+
+clearHtmlBtn.addEventListener("click", () => { htmlInput.value = ""; htmlInput.focus(); });
+clearCssBtn.addEventListener("click",  () => { cssInput.value  = ""; cssInput.focus();  });
+
+// Auto-save code changes (debounced)
+htmlInput.addEventListener("input", () => {
+  clearTimeout(codeDebounceTimer);
+  codeDebounceTimer = setTimeout(() => {
+    userSettings.lastHtml = htmlInput.value;
+    userSettings.lastCss  = cssInput.value;
+    saveSettings();
+  }, 1500);
+});
+
+cssInput.addEventListener("input", () => {
+  clearTimeout(codeDebounceTimer);
+  codeDebounceTimer = setTimeout(() => {
+    userSettings.lastHtml = htmlInput.value;
+    userSettings.lastCss  = cssInput.value;
+    saveSettings();
+  }, 1500);
+});
+
+// ═══════════════════════════════════════════════════════════
+// AUTH HELPERS
+// ═══════════════════════════════════════════════════════════
+
+function setAuthLoading(loading) {
+  authSubmitBtn.disabled = loading;
+  authSubmitLabel.classList.toggle("hidden", loading);
+  authSpinner.classList.toggle("hidden", !loading);
+}
+
+function showAuthError(msg) {
+  authError.textContent = msg;
   authError.classList.remove("hidden");
 }
 
@@ -762,32 +819,31 @@ function clearAuthError() {
   authError.textContent = "";
 }
 
+// ═══════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════
+
 let toastTimer = null;
 function showToast(message, type = "") {
   clearTimeout(toastTimer);
   toast.textContent = message;
   toast.className   = `toast ${type}`;
   toast.classList.remove("hidden");
-  toastTimer = setTimeout(() => {
-    toast.classList.add("hidden");
-  }, 3000);
+  toastTimer = setTimeout(() => toast.classList.add("hidden"), 3000);
 }
 
 // ═══════════════════════════════════════════════════════════
 // UTILITIES
 // ═══════════════════════════════════════════════════════════
 
-// Get 1–2 letter initials from a name or email
 function getInitials(str) {
   if (!str) return "?";
   const parts = str.trim().split(/[\s@]+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-  return parts[0].slice(0, 2).toUpperCase();
+  return parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : parts[0].slice(0, 2).toUpperCase();
 }
 
-// Convert Firebase auth error codes to friendly messages
 function friendlyAuthError(code) {
   const map = {
     "auth/invalid-email":            "Please enter a valid email address.",
@@ -804,18 +860,13 @@ function friendlyAuthError(code) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// SERVICE WORKER REGISTRATION
+// SERVICE WORKER
 // ═══════════════════════════════════════════════════════════
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("./sw.js")
-      .then((reg) => {
-        console.log("Service worker registered:", reg.scope);
-      })
-      .catch((err) => {
-        console.warn("Service worker registration failed:", err);
-      });
+    navigator.serviceWorker.register("./sw.js")
+      .then(reg => console.log("SW registered:", reg.scope))
+      .catch(err => console.warn("SW failed:", err));
   });
 }
