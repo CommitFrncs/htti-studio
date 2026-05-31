@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="HTTI Studio — Convert HTML + CSS into images instantly." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+  <title>HTTI Studio</title>
+</head>
+<body>
+
+  <!-- ════════════════════════════════
+       AUTH SCREEN
+  ════════════════════════════════ -->
+  <div id="auth-screen" class="screen active">
+    <div class="auth-container">
+
+      <div class="auth-brand">
+        <div class="auth-logo">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h1 class="auth-title">HTTI Studio</h1>
+        <p class="auth-sub">HTML + CSS → Image</p>
+      </div>
+
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Sign In</button>
+          <button class="auth-tab" data-tab="signup">Sign Up</button>
+        </div>
+
+        <div class="auth-error hidden" id="auth-error"></div>
+
+        <form id="auth-form" novalidate>
+          <div class="field hidden" id="name-group">
+            <label class="field-label" for="auth-name">Name</label>
+            <input class="field-input" type="text" id="auth-name" placeholder="Ada Lovelace" autocomplete="name" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="auth-email">Email</label>
+            <input class="field-input" type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" required />
+          </div>
+          <div class="field">
+            <label class="field-label" for="auth-password">Password</label>
+            <input class="field-input" type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" required />
+          </div>
+          <button type="submit" class="btn-primary" id="auth-submit-btn">
+            <span class="btn-label">Sign In</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </form>
+
+        <div class="divider"><span>or</span></div>
+
+        <div class="oauth-grid">
+          <button class="btn-oauth" id="google-btn">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+              <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58( 9 3.58z" fill="#EA4335"/>
+            </svg>
+            Google
+          </button>
+          <button class="btn-oauth" id="github-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+            </svg>
+            GitHub
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
+       APP SCREEN
+  ════════════════════════════════ -->
+  <div id="app-screen" class="screen">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-logo">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <span class="topbar-title">HTTI Studio</span>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn" id="history-toggle-btn" title="History">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>
+          </svg>
+        </button>
+        <button class="topbar-btn" id="settings-toggle-btn" title="Settings">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+        <div class="avatar-wrap">
+          <button class="avatar-btn" id="user-avatar-btn">
+            <span id="user-avatar-initials">?</span>
+          </button>
+          <div class="avatar-dropdown hidden" id="user-dropdown">
+            <div class="dropdown-info">
+              <span class="dropdown-name" id="dropdown-display-name">User</span>
+              <span class="dropdown-email" id="dropdown-email">—</span>
+            </div>
+            <hr class="dropdown-divider" />
+            <button class="dropdown-item" id="logout-btn">Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- TAB BAR -->
+    <div class="tab-bar">
+      <button class="tab active" data-tab="html" id="tab-html">
+        <span class="tab-dot" style="background:#D4F53C"></span>
+        HTML
+      </button>
+      <button class="tab" data-tab="css" id="tab-css">
+        <span class="tab-dot" style="background:#7CB9E8"></span>
+        CSS
+      </button>
+      <button class="tab" data-tab="preview" id="tab-preview">
+        <span class="tab-dot" style="background:#4DFF91"></span>
+        Preview
+      </button>
+    </div>
+
+    <!-- PANELS -->
+    <div class="panels-wrap">
+
+      <!-- HTML PANEL -->
+      <div class="panel active" id="panel-html">
+        <div class="editor-toolbar">
+          <span class="editor-badge html-badge">HTML</span>
+          <button class="clear-btn" id="clear-html-btn">Clear</button>
+        </div>
+        <textarea
+          class="code-editor"
+          id="html-input"
+          spellcheck="false"
+          autocorrect="off"
+          autocapitalize="off"
+          autocomplete="off"
+          placeholder="<!-- Paste your HTML here -->"
+        ></textarea>
+      </div>
+
+      <!-- CSS PANEL -->
+      <div class="panel" id="panel-css">
+        <div class="editor-toolbar">
+          <span class="editor-badge css-badge">CSS</span>
+          <button class="clear-btn" id="clear-css-btn">Clear</button>
+        </div>
+        <textarea
+          class="code-editor"
+          id="css-input"
+          spellcheck="false"
+          autocorrect="off"
+          autocapitalize="off"
+          autocomplete="off"
+          placeholder="/* Paste your CSS here */"
+        ></textarea>
+      </div>
+
+      <!-- PREVIEW PANEL -->
+      <div class="panel" id="panel-preview">
+
+        <!-- Empty / demo state -->
+        <div class="preview-empty" id="preview-empty">
+          <div class="preview-empty-inner">
+            <div class="pe-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+              </svg>
+            </div>
+            <p class="pe-title">No image yet</p>
+            <p class="pe-sub">Add HTML + CSS then tap<br/><strong>Generate Image</strong></p>
+          </div>
+        </div>
+
+        <!-- Loading state -->
+        <div class="preview-loading hidden" id="preview-loading">
+          <div class="loading-pulse">
+            <div class="pulse-ring"></div>
+            <div class="pulse-ring delay"></div>
+          </div>
+          <p class="loading-label">Generating image...</p>
+        </div>
+
+        <!-- Output state -->
+        <div class="preview-result hidden" id="preview-result">
+          <div class="result-image-wrap">
+            <img id="output-image" src="" alt="Generated image" />
+          </div>
+          <div class="result-toolbar">
+            <div class="result-meta" id="output-meta"></div>
+            <div class="result-actions">
+              <a class="result-btn accent" id="download-btn" download="htti-export.png">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download
+              </a>
+              <button class="result-btn ghost" id="copy-url-btn">Copy URL</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error state -->
+        <div class="preview-error hidden" id="preview-error">
+          <div class="pe-icon error-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <p class="pe-title error-title" id="error-message">Something went wrong.</p>
+          <button class="retry-btn" id="retry-btn">Try Again</button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- GENERATE BUTTON — sticky bottom -->
+    <div class="generate-bar">
+      <button class="generate-btn" id="generate-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+        <span id="generate-label">Generate Image</span>
+        <span class="gen-spinner hidden" id="generate-spinner"></span>
+      </button>
+    </div>
+
+    <!-- SETTINGS DRAWER -->
+    <div class="drawer-overlay hidden" id="settings-overlay"></div>
+    <aside class="drawer hidden" id="settings-panel">
+      <div class="drawer-handle"></div>
+      <div class="drawer-header">
+        <h2 class="drawer-title">Image Settings</h2>
+        <button class="drawer-close" id="settings-close-btn">✕</button>
+      </div>
+      <div class="drawer-body">
+        <div class="settings-row">
+          <div class="field">
+            <label class="field-label" for="s-width">Width (px)</label>
+            <input class="field-input" type="number" id="s-width" value="800" min="100" max="3840" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="s-height">Height (px)</label>
+            <input class="field-input" type="number" id="s-height" value="600" min="100" max="2160" />
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="field">
+            <label class="field-label" for="s-scale">Device Scale</label>
+            <select class="field-input field-select" id="s-scale">
+              <option value="1">1x</option>
+              <option value="2" selected>2x Retina</option>
+              <option value="3">3x</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="s-quality">Quality</label>
+            <input class="field-input" type="number" id="s-quality" value="90" min="1" max="100" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="s-bg">Background Color</label>
+          <div class="color-row">
+            <input class="color-swatch" type="color" id="s-bg-picker" value="#ffffff" />
+            <input class="field-input" type="text" id="s-bg" value="#ffffff" maxlength="9" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="s-format">File Type</label>
+          <div class="format-grid">
+            <label class="format-option">
+              <input type="radio" name="format" value="png" checked />
+              <span>PNG</span>
+            </label>
+            <label class="format-option">
+              <input type="radio" name="format" value="jpeg" />
+              <span>JPEG</span>
+            </label>
+            <label class="format-option">
+              <input type="radio" name="format" value="webp" />
+              <span>WebP</span>
+            </label>
+          </div>
+          <!-- hidden select to keep app.js compatibility -->
+          <select class="hidden" id="s-format">
+            <option value="png" selected>PNG</option>
+            <option value="jpeg">JPEG</option>
+            <option value="webp">WebP</option>
+          </select>
+        </div>
+        <p class="settings-note">Settings are saved automatically to your account.</p>
+      </div>
+    </aside>
+
+    <!-- HISTORY DRAWER -->
+    <div class="drawer-overlay hidden" id="history-overlay"></div>
+    <aside class="drawer hidden" id="history-panel">
+      <div class="drawer-handle"></div>
+      <div class="drawer-header">
+        <h2 class="drawer-title">History</h2>
+        <button class="drawer-close" id="history-close-btn">✕</button>
+      </div>
+      <div class="drawer-body" id="history-list">
+        <p class="empty-state">No images yet.<br/>History shows here after you generate.</p>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast hidden" id="toast" role="status"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
