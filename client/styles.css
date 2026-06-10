@@ -977,9 +977,9 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--bd); border-radius: 99px; }
 
 /* ════════════════════════════════════════════════════════
-   DESKTOP UPGRADE (≥ 768px) — side by side editors
+   DESKTOP UPGRADE (≥ 900px) — three-column layout
 ════════════════════════════════════════════════════════ */
-@media (min-width: 768px) {
+@media (min-width: 900px) {
 
   body { overflow: auto; }
 

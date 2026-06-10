@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="HTTI Studio — Convert HTML + CSS into images instantly." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <!-- Open Graph -->
+  <meta property="og:title" content="HTTI Studio" />
+  <meta property="og:description" content="Convert HTML + CSS into pixel-perfect images instantly. No design tools needed — just code." />
+  <meta property="og:image" content="https://htti.studio/og-image.png" />
+  <meta property="og:url" content="https://htti.studio" />
+  <meta property="og:type" content="website" />
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="HTTI Studio" />
+  <meta name="twitter:description" content="Convert HTML + CSS into pixel-perfect images instantly." />
+  <link rel="canonical" href="https://htti.studio" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <title>HTTI Studio</title>
+</head>
+<body>
+
+  <!-- ════════════════════════════════════════════
+       AUTH SCREEN
+  ════════════════════════════════════════════ -->
+  <div id="auth-screen" class="screen active">
+    <div class="auth-container">
+
+      <div class="auth-brand">
+        <div class="auth-logo">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h1 class="auth-title">HTTI Studio</h1>
+        <p class="auth-sub">HTML + CSS → Image</p>
+      </div>
+
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Sign In</button>
+          <button class="auth-tab" data-tab="signup">Sign Up</button>
+        </div>
+
+        <div class="auth-error hidden" id="auth-error"></div>
+
+        <form id="auth-form" novalidate>
+          <div class="field hidden" id="name-group">
+            <label class="field-label" for="auth-name">Name</label>
+            <input class="field-input" type="text" id="auth-name" placeholder="Ada Lovelace" autocomplete="name" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="auth-email">Email</label>
+            <input class="field-input" type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" required />
+          </div>
+          <div class="field">
+            <label class="field-label" for="auth-password">Password</label>
+            <input class="field-input" type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" required />
+          </div>
+          <button type="submit" class="btn-primary" id="auth-submit-btn">
+            <span class="btn-label">Sign In</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </form>
+
+        <div class="divider"><span>or</span></div>
+
+        <div class="oauth-grid">
+          <button class="btn-oauth" id="google-btn">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+              <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+            </svg>
+            Google
+          </button>
+          <button class="btn-oauth" id="github-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+            </svg>
+            GitHub
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    "use strict";
+
+    // ── Firebase Config ──
+    const FIREBASE_CONFIG = {
+      apiKey:            "AIzaSyC7OI7zrumGw9zbzluDgUzDcAdQpQO_IUk",
+      authDomain:        "htti-studio.firebaseapp.com",
+      projectId:         "htti-studio",
+      storageBucket:     "htti-studio.firebasestorage.app",
+      messagingSenderId: "104223911609",
+      appId:             "1:104223911609:web:0e07d41e3896c1084a7568"
+    };
+
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const auth = firebase.auth();
+
+    // ── DOM ──
+    const authError       = document.getElementById("auth-error");
+    const authForm        = document.getElementById("auth-form");
+    const authTabs        = document.querySelectorAll(".auth-tab");
+    const nameGroup       = document.getElementById("name-group");
+    const authName        = document.getElementById("auth-name");
+    const authEmail       = document.getElementById("auth-email");
+    const authPassword    = document.getElementById("auth-password");
+    const authSubmitBtn   = document.getElementById("auth-submit-btn");
+    const authSubmitLabel = authSubmitBtn.querySelector(".btn-label");
+    const authSpinner     = authSubmitBtn.querySelector(".btn-spinner");
+    const googleBtn       = document.getElementById("google-btn");
+    const githubBtn       = document.getElementById("github-btn");
+
+    // ── State ──
+    let authMode = "login";
+
+    // ── Auth State Listener ──
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        window.location.replace("index.html");
+      }
+    });
+
+    // Handle OAuth redirect result
+    auth.getRedirectResult().catch((err) => {
+      const ignored = ["auth/operation-not-supported-in-this-environment"];
+      if (err.code && !ignored.includes(err.code)) {
+        showAuthError(friendlyAuthError(err.code));
+      }
+    });
+
+    // ── Auth Tabs ──
+    authTabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        authTabs.forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        authMode = tab.dataset.tab;
+        clearAuthError();
+        if (authMode === "signup") {
+          nameGroup.classList.remove("hidden");
+          authSubmitLabel.textContent = "Create Account";
+        } else {
+          nameGroup.classList.add("hidden");
+          authSubmitLabel.textContent = "Sign In";
+        }
+      });
+    });
+
+    // ── Email Auth ──
+    authForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearAuthError();
+
+      const email    = authEmail.value.trim();
+      const password = authPassword.value;
+      const name     = authName.value.trim();
+
+      if (!email || !password) { showAuthError("Please fill in all fields."); return; }
+      if (password.length < 6) { showAuthError("Password must be at least 6 characters."); return; }
+
+      setAuthLoading(true);
+      try {
+        if (authMode === "signup") {
+          const cred = await auth.createUserWithEmailAndPassword(email, password);
+          if (name) await cred.user.updateProfile({ displayName: name });
+        } else {
+          await auth.signInWithEmailAndPassword(email, password);
+        }
+        // On success, onAuthStateChanged redirects to index.html
+      } catch (err) {
+        showAuthError(friendlyAuthError(err.code));
+        setAuthLoading(false);
+      }
+    });
+
+    // ── Google / GitHub Auth ──
+    googleBtn.addEventListener("click", async () => {
+      clearAuthError();
+      try {
+        await auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+      } catch (err) {
+        showAuthError(friendlyAuthError(err.code));
+      }
+    });
+
+    githubBtn.addEventListener("click", async () => {
+      clearAuthError();
+      try {
+        await auth.signInWithRedirect(new firebase.auth.GithubAuthProvider());
+      } catch (err) {
+        showAuthError(friendlyAuthError(err.code));
+      }
+    });
+
+    // ── Helpers ──
+    function setAuthLoading(loading) {
+      authSubmitBtn.disabled = loading;
+      authSubmitLabel.classList.toggle("hidden", loading);
+      authSpinner.classList.toggle("hidden", !loading);
+    }
+
+    function showAuthError(msg) {
+      authError.textContent = msg;
+      authError.classList.remove("hidden");
+    }
+
+    function clearAuthError() {
+      authError.classList.add("hidden");
+      authError.textContent = "";
+    }
+
+    function friendlyAuthError(code) {
+      const map = {
+        "auth/invalid-email":            "Please enter a valid email address.",
+        "auth/user-not-found":           "No account found with this email.",
+        "auth/wrong-password":           "Incorrect password. Please try again.",
+        "auth/email-already-in-use":     "An account with this email already exists.",
+        "auth/weak-password":            "Password should be at least 6 characters.",
+        "auth/too-many-requests":        "Too many attempts. Please try again later.",
+        "auth/network-request-failed":   "Network error. Check your connection.",
+        "auth/popup-blocked":            "Popup was blocked. Please allow popups for this site.",
+        "auth/account-exists-with-different-credential": "An account already exists with a different sign-in method."
+      };
+      return map[code] || "Something went wrong. Please try again.";
+    }
+  </script>
+
+</body>
+</html>

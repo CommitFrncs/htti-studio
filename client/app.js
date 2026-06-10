@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   HTTI Studio — app.js (v3)
+   HTTI Studio — app.js (v4)
    Vanilla JS | Firebase Auth + Firestore | Netlify Functions
    ═══════════════════════════════════════════════════════════ */
 
@@ -164,25 +164,6 @@ let historyOpen       = false;
 let activeTab         = "html";
 
 // ═══════════════════════════════════════════════════════════
-// DOM — AUTH
-// ═══════════════════════════════════════════════════════════
-
-const authScreen     = document.getElementById("auth-screen");
-const appScreen      = document.getElementById("app-screen");
-const authError      = document.getElementById("auth-error");
-const authForm       = document.getElementById("auth-form");
-const authTabs       = document.querySelectorAll(".auth-tab");
-const nameGroup      = document.getElementById("name-group");
-const authName       = document.getElementById("auth-name");
-const authEmail      = document.getElementById("auth-email");
-const authPassword   = document.getElementById("auth-password");
-const authSubmitBtn  = document.getElementById("auth-submit-btn");
-const authSubmitLabel= authSubmitBtn.querySelector(".btn-label");
-const authSpinner    = authSubmitBtn.querySelector(".btn-spinner");
-const googleBtn      = document.getElementById("google-btn");
-const githubBtn      = document.getElementById("github-btn");
-
-// ═══════════════════════════════════════════════════════════
 // DOM — APP
 // ═══════════════════════════════════════════════════════════
 
@@ -255,18 +236,7 @@ auth.onAuthStateChanged(async (user) => {
     currentUser = user;
     await onUserLogin(user);
   } else {
-    currentUser = null;
-    showScreen("auth");
-  }
-});
-
-// Handle Google/GitHub redirect result
-auth.getRedirectResult().then(() => {
-  // Handled by onAuthStateChanged
-}).catch((err) => {
-  const ignored = ["auth/operation-not-supported-in-this-environment"];
-  if (err.code && !ignored.includes(err.code)) {
-    showAuthError(friendlyAuthError(err.code));
+    window.location.replace("auth.html");
   }
 });
 
@@ -277,101 +247,7 @@ async function onUserLogin(user) {
   dropdownEmail.textContent = user.email || "—";
 
   await loadSettings(user.uid);
-  showScreen("app");
 }
-
-// ═══════════════════════════════════════════════════════════
-// SCREEN SWITCHER
-// ═══════════════════════════════════════════════════════════
-
-function showScreen(name) {
-  if (name === "auth") {
-    authScreen.classList.add("active");
-    authScreen.style.display = "";
-    appScreen.classList.remove("active");
-    appScreen.style.display = "none";
-  } else {
-    authScreen.classList.remove("active");
-    authScreen.style.display = "none";
-    appScreen.classList.add("active");
-    appScreen.style.display = "";
-  }
-}
-
-// ═══════════════════════════════════════════════════════════
-// AUTH TABS
-// ═══════════════════════════════════════════════════════════
-
-let authMode = "login";
-
-authTabs.forEach((tab) => {
-  tab.addEventListener("click", () => {
-    authTabs.forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    authMode = tab.dataset.tab;
-    clearAuthError();
-    if (authMode === "signup") {
-      nameGroup.classList.remove("hidden");
-      authSubmitLabel.textContent = "Create Account";
-    } else {
-      nameGroup.classList.add("hidden");
-      authSubmitLabel.textContent = "Sign In";
-    }
-  });
-});
-
-// ═══════════════════════════════════════════════════════════
-// EMAIL AUTH
-// ═══════════════════════════════════════════════════════════
-
-authForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  clearAuthError();
-
-  const email    = authEmail.value.trim();
-  const password = authPassword.value;
-  const name     = authName.value.trim();
-
-  if (!email || !password) { showAuthError("Please fill in all fields."); return; }
-  if (password.length < 6) { showAuthError("Password must be at least 6 characters."); return; }
-
-  setAuthLoading(true);
-  try {
-    if (authMode === "signup") {
-      const cred = await auth.createUserWithEmailAndPassword(email, password);
-      if (name) await cred.user.updateProfile({ displayName: name });
-    } else {
-      await auth.signInWithEmailAndPassword(email, password);
-    }
-  } catch (err) {
-    showAuthError(friendlyAuthError(err.code));
-    setAuthLoading(false);
-  }
-});
-
-// ═══════════════════════════════════════════════════════════
-// GOOGLE / GITHUB AUTH
-// ═══════════════════════════════════════════════════════════
-
-googleBtn.addEventListener("click", async () => {
-  clearAuthError();
-  const provider = new firebase.auth.GoogleAuthProvider();
-  try {
-    await auth.signInWithRedirect(provider);
-  } catch (err) {
-    showAuthError(friendlyAuthError(err.code));
-  }
-});
-
-githubBtn.addEventListener("click", async () => {
-  clearAuthError();
-  const provider = new firebase.auth.GithubAuthProvider();
-  try {
-    await auth.signInWithRedirect(provider);
-  } catch (err) {
-    showAuthError(friendlyAuthError(err.code));
-  }
-});
 
 // ═══════════════════════════════════════════════════════════
 // LOGOUT
@@ -802,26 +678,6 @@ cssInput.addEventListener("input", () => {
 });
 
 // ═══════════════════════════════════════════════════════════
-// AUTH HELPERS
-// ═══════════════════════════════════════════════════════════
-
-function setAuthLoading(loading) {
-  authSubmitBtn.disabled = loading;
-  authSubmitLabel.classList.toggle("hidden", loading);
-  authSpinner.classList.toggle("hidden", !loading);
-}
-
-function showAuthError(msg) {
-  authError.textContent = msg;
-  authError.classList.remove("hidden");
-}
-
-function clearAuthError() {
-  authError.classList.add("hidden");
-  authError.textContent = "";
-}
-
-// ═══════════════════════════════════════════════════════════
 // TOAST
 // ═══════════════════════════════════════════════════════════
 
@@ -844,21 +700,6 @@ function getInitials(str) {
   return parts.length >= 2
     ? (parts[0][0] + parts[1][0]).toUpperCase()
     : parts[0].slice(0, 2).toUpperCase();
-}
-
-function friendlyAuthError(code) {
-  const map = {
-    "auth/invalid-email":            "Please enter a valid email address.",
-    "auth/user-not-found":           "No account found with this email.",
-    "auth/wrong-password":           "Incorrect password. Please try again.",
-    "auth/email-already-in-use":     "An account with this email already exists.",
-    "auth/weak-password":            "Password should be at least 6 characters.",
-    "auth/too-many-requests":        "Too many attempts. Please try again later.",
-    "auth/network-request-failed":   "Network error. Check your connection.",
-    "auth/popup-blocked":            "Popup was blocked. Please allow popups for this site.",
-    "auth/account-exists-with-different-credential": "An account already exists with a different sign-in method."
-  };
-  return map[code] || "Something went wrong. Please try again.";
 }
 
 // ═══════════════════════════════════════════════════════════
