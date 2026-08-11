@@ -1,0 +1,1 @@
+alter table profiles add column has_seen_guide boolean not null default false;
