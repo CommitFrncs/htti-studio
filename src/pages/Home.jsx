@@ -1,18 +1,19 @@
 // src/pages/Home.jsx
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect, useRef} from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
 import {
-  Home as HomeIcon,
+  Home as
   LayoutTemplate,
   Code2,
-  User,
   Sparkles,
   History,
   Zap,
-  Bell
+  Bell,
 } from "lucide-react";
+import { useNotifications } from "../hooks/useNotifications";
+import BottomNav from "../components/BottomNav";
 
 function greeting() {
   const hour = new Date().getHours();
@@ -24,52 +25,84 @@ function greeting() {
 export default function Home() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [showGuide, setShowGuide] = useState(false);
   const [checking, setChecking] = useState(true);
   const [profile, setProfile] = useState(null);
   const [recentRenders, setRecentRenders] = useState([]);
   const [planLimits, setPlanLimits] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const { notifications, unreadCount, markAsRead, markAllAsRead } =
+    useNotifications(user?.id);
 
-  useEffect(() => {
-    if (!user) return;
+useEffect(() => {
+  if (!user) return;
 
-    async function loadData() {
-      const [{ data: profileData, error: profileError }, { data: renders }] =
-        await Promise.all([
-          supabase
-            .from("profiles")
-            .select("has_seen_guide, plan, renders_this_month")
-            .eq("id", user.id)
-            .single(),
-          supabase
-            .from("renders")
-            .select("id, mode, created_at")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false })
-            .limit(4),
-        ]);
+  async function loadData() {
+    const [{ data: profileData, error: profileError }, { data: renders }] =
+      await Promise.all([
+        supabase
+          .from("profiles")
+          .select("has_seen_guide, plan, renders_this_month")
+          .eq("id", user.id)
+          .single(),
+        supabase
+          .from("renders")
+          .select("id, mode, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(4),
+      ]);
 
-      if (profileError) {
-        console.error("Profile fetch error:", profileError);
-      } else {
-        setProfile(profileData);
-        setShowGuide(!profileData?.has_seen_guide);
+    if (profileError) {
+      console.error("Profile fetch error:", profileError);
+    } else {
+      setProfile(profileData);
+      setShowGuide(!profileData?.has_seen_guide);
 
-        const { data: limits } = await supabase
-          .from("plan_limits")
-          .select("monthly_export_limit")
-          .eq("plan", profileData.plan)
-          .single();
-        setPlanLimits(limits);
-      }
-
-      setRecentRenders(renders || []);
-      setChecking(false);
+      const { data: limits } = await supabase
+        .from("plan_limits")
+        .select("monthly_export_limit")
+        .eq("plan", profileData.plan)
+        .single();
+      setPlanLimits(limits);
     }
 
-    loadData();
-  }, [user]);
+    setRecentRenders(renders || []);
+    setChecking(false);
+  }
+
+  loadData();
+}, [user]);
+
+useEffect(() => {
+  if (!user) return;
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(async function (OneSignal) {
+    await OneSignal.login(user.id);
+  });
+}, [user]);
+
+const notificationsRef = useRef(null);
+
+useEffect(() => {
+  function handleClickOutside(e) {
+    if (
+      notificationsRef.current &&
+      !notificationsRef.current.contains(e.target)
+    ) {
+      setShowNotifications(false);
+    }
+  }
+  function handleEscape(e) {
+    if (e.key === "Escape") setShowNotifications(false);
+  }
+  document.addEventListener("mousedown", handleClickOutside);
+  document.addEventListener("keydown", handleEscape);
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+    document.removeEventListener("keydown", handleEscape);
+  };
+}, []);
 
   async function dismissGuide() {
     if (!user) return;
@@ -83,15 +116,6 @@ export default function Home() {
   if (loading || (user && checking)) return null;
   if (!user) return null;
 
-  console.log(
-    "RENDER — loading:",
-    loading,
-    "user:",
-    user,
-    "checking:",
-    checking,
-  );
-
   const firstName =
     user.user_metadata?.full_name?.split(" ")[0] ||
     user.email?.split("@")[0] ||
@@ -100,13 +124,6 @@ export default function Home() {
   const used = profile?.renders_this_month ?? 0;
   const limit = planLimits?.monthly_export_limit;
   const pct = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
-
-  const tabs = [
-    { label: "Home", path: "/home", icon: HomeIcon },
-    { label: "Templates", path: "/templates", icon: LayoutTemplate },
-    { label: "Code", path: "/code", icon: Code2 },
-    { label: "Profile", path: "/profile", icon: User },
-  ];
 
   const quickActions = [
     { label: "New from Template", icon: Sparkles, path: "/templates" },
@@ -135,12 +152,100 @@ export default function Home() {
             Hi {firstName} 👋
           </h1>
         </div>
-        <button
-          className="p-2 rounded-full"
-          style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
-        >
-          <Bell size={20} color="white" />
-        </button>
+        <div className="relative" ref={notificationsRef}>
+          <button
+            onClick={() => setShowNotifications((s) => !s)}
+            className="p-2 rounded-full relative cursor-pointer"
+            style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
+          >
+            <Bell size={20} color="white" />
+            {unreadCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 text-white text-xs font-bold rounded-full flex items-center justify-center"
+                style={{
+                  backgroundColor: "#FF6B35",
+                  width: "18px",
+                  height: "18px",
+                  fontSize: "10px",
+                }}
+              >
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {showNotifications && (
+            <div
+              className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-xl border z-50 max-h-96 overflow-y-auto"
+              style={{ borderColor: "#E8E8E8" }}
+            >
+              <div
+                className="flex items-center justify-between p-4 border-b"
+                style={{ borderColor: "#E8E8E8" }}
+              >
+                <span className="font-bold" style={{ color: "#1A1A1A" }}>
+                  Notifications
+                </span>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="text-xs font-medium cursor-pointer"
+                    style={{ color: "#3D5AFE" }}
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
+
+              <div
+                className="px-4 py-2 border-b"
+                style={{ borderColor: "#E8E8E8" }}
+              >
+                <button
+                  onClick={requestPushPermission}
+                  className="text-xs font-medium cursor-pointer"
+                  style={{ color: "#3D5AFE" }}
+                >
+                  Enable push notifications
+                </button>
+              </div>
+
+              {notifications.length === 0 ? (
+                <p
+                  className="p-6 text-sm text-center"
+                  style={{ color: "#6B6B6B" }}
+                >
+                  No notifications yet.
+                </p>
+              ) : (
+                notifications.map((n) => (
+                  <button
+                    key={n.id}
+                    onClick={() => markAsRead(n.id)}
+                    className="w-full text-left p-4 border-b hover:bg-gray-50 transition"
+                    style={{
+                      borderColor: "#E8E8E8",
+                      backgroundColor: n.read ? "white" : "#F4F6FF",
+                    }}
+                  >
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: "#1A1A1A" }}
+                    >
+                      {n.title}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: "#6B6B6B" }}>
+                      {n.body}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: "#B0B0B0" }}>
+                      {new Date(n.created_at).toLocaleString()}
+                    </p>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Content */}
@@ -166,7 +271,7 @@ export default function Home() {
             </p>
             <button
               onClick={dismissGuide}
-              className="text-sm font-semibold"
+              className="text-sm font-semibold cursor-pointer"
               style={{ color: "#3D5AFE" }}
             >
               Got it →
@@ -222,7 +327,7 @@ export default function Home() {
               <button
                 key={action.label}
                 onClick={() => navigate(action.path)}
-                className="flex flex-col items-center gap-2 shrink-0 px-4 py-3 rounded-2xl border"
+                className="flex flex-col items-center gap-2 shrink-0 px-4 py-3 rounded-2xl border cursor-pointer hover:shadow-md transition"
                 style={{ borderColor: "#E8E8E8", minWidth: "90px" }}
               >
                 <div
@@ -252,7 +357,7 @@ export default function Home() {
         <div className="grid gap-4 mb-6">
           <button
             onClick={() => navigate("/templates")}
-            className="text-left p-5 rounded-2xl border hover:shadow-md transition flex items-start gap-4"
+            className="text-left p-5 rounded-2xl border hover:shadow-md transition flex items-start gap-4 cursor-pointer"
             style={{ borderColor: "#E8E8E8" }}
           >
             <div
@@ -279,7 +384,7 @@ export default function Home() {
 
           <button
             onClick={() => navigate("/code")}
-            className="text-left p-5 rounded-2xl border hover:shadow-md transition flex items-start gap-4"
+            className="text-left p-5 rounded-2xl border hover:shadow-md transition flex items-start gap-4cursor-pointer"
             style={{ borderColor: "#E8E8E8" }}
           >
             <div
@@ -346,28 +451,7 @@ export default function Home() {
           </>
         )}
       </div>
-
-      {/* Bottom tab bar */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2"
-        style={{ borderColor: "#E8E8E8" }}
-      >
-        {tabs.map((tab) => {
-          const active = location.pathname === tab.path;
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.path}
-              onClick={() => navigate(tab.path)}
-              className="flex flex-col items-center gap-1 px-3 py-1"
-              style={{ color: active ? "#3D5AFE" : "#6B6B6B" }}
-            >
-              <Icon size={20} strokeWidth={active ? 2.5 : 2} />
-              <span className="text-xs font-medium">{tab.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+      <BottomNav />
     </div>
   );
 }
